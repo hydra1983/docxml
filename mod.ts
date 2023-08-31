@@ -105,3 +105,6 @@ export { type NumberingXml } from './src/files/NumberingXml.ts';
 export { type RelationshipsXml } from './src/files/RelationshipsXml.ts';
 export { type SettingsXml } from './src/files/SettingsXml.ts';
 export { type StylesXml } from './src/files/StylesXml.ts';
+
+// Classes
+export { type Archive } from './src/classes/Archive.ts';

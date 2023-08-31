@@ -152,18 +152,45 @@ export class Cell extends Component<CellProps, CellChild> {
 			CellProps & { mergedAway: boolean; children: Node[] }
 		>(
 			`
-				let $colStart := docxml:cell-column(.)
+			  declare function local:effective-col-index($cell) {
+			    sum(
+          $cell/preceding-sibling::${QNS.w}tc/${QNS.w}tcPr/${QNS.w}gridSpan/@${QNS.w}val/number())
+          + count($cell/preceding-sibling::${QNS.w}tc)
+          - count($cell/preceding-sibling::${QNS.w}tc[${QNS.w}tcPr/${QNS.w}gridSpan])
+			  };
+
+			  declare function local:find-spanned-rows($rows, $effectiveColIndex, $result) {
+          if (empty($rows)) then $result
+          else (
+            let $currentRow := $rows[1]
+            let $isContinuous := exists(
+              $currentRow/child::${QNS.w}tc[
+                local:effective-col-index(.) = $effectiveColIndex
+                and ./${QNS.w}tcPr/${QNS.w}vMerge[
+                  @${QNS.w}val = "continue"
+                ]
+              ]
+            )
+
+            return
+              if ($isContinuous) then local:find-spanned-rows(subsequence($rows, 2), $effectiveColIndex, ($result, $currentRow))
+              else $result
+          )
+        };
+
+        let $effectiveColIndex := local:effective-col-index(.)
+        let $nextRows := ../following-sibling::${QNS.w}tr
+        let $spannedRows := local:find-spanned-rows($nextRows, $effectiveColIndex, ())
+				let $spannedRowsCount := count($spannedRows)
+				let $lastSpannedRow := $spannedRows[$spannedRowsCount]
+
+				let $firstNextRow := if ($lastSpannedRow)
+          then ($lastSpannedRow/following-sibling::${QNS.w}tr)[1]
+          else $nextRows[1]
+
+        let $colStart := docxml:cell-column(.)
 
 				let $rowStart := count(../preceding-sibling::${QNS.w}tr)
-
-				let $firstNextRow := ../following-sibling::${QNS.w}tr[
-					child::${QNS.w}tc[docxml:cell-column(.) = $colStart and not(
-						./${QNS.w}tcPr/${QNS.w}vMerge[
-							@${QNS.w}val = "continue" or
-							not(./@${QNS.w}val)
-						]
-					)]
-				][1]
 
 				let $rowEnd := if ($firstNextRow)
 					then count($firstNextRow/preceding-sibling::${QNS.w}tr)
